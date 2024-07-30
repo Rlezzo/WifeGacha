@@ -1,0 +1,8 @@
+# ./application/services
+from .character_application_service import CharacterApplicationService as CharacterAppService
+from .user_group_application_service import UserGroupApplicationService as UserGroupAppService
+from .user_group_character_application_service import UserGroupCharacterApplicationService as UGCharacterAppService
+from .current_user_group_character_application_service import CurrentUserGroupCharacterApplicationService as CurrentAppService
+from .event_service import EventApplicationService as EventAppService
+from .action_application_service import ActionApplicationService as ActionAppService
+from .statistics_application_service import StatisticsApplicationService as StatisticsAppService

@@ -1,0 +1,8 @@
+# ./infrastructure/factories
+from .user_group_service_factory import UserGroupServiceFactory as UserGroupSvFactory 
+from .character_service_factory import CharacterServiceFactory as CharacterSvFactory
+from .user_group_character_service_factory import UserGroupCharacterServiceFactory as UGCharacterSvFactory
+from .current_user_group_character_service_factory import CurrentUserGroupCharacterServiceFactory as CurrentSvFactory
+from .event_service_factory import EventServiceFactory as EventSvFactory
+from .action_application_service_factory import ActionServiceFactory as ActionSvFactory
+from .statistics_application_factory import StatisticsServiceFactory as StatisticsSvFactory
