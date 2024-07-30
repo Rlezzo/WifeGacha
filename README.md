@@ -63,27 +63,51 @@ wife文件夹下有default、kotone等卡池文件夹，可以按照卡池分类
 -[清理抽老婆用户] 清除不在的群和群成员(可能会很卡)（管理）
 ```
 ### 抽老婆
-效果图：![image](https://github.com/user-attachments/assets/161ebac8-4bb1-4928-ac28-10fd7ed78fc0)
+效果图：
+
+![image](https://github.com/user-attachments/assets/161ebac8-4bb1-4928-ac28-10fd7ed78fc0)
 
 重复抽到会显示`重复了！`
 ### 查老婆
-效果图：![image](https://github.com/user-attachments/assets/dfd9b163-68a6-4189-83c1-a2f87d8e217b)
+效果图：
+
+![image](https://github.com/user-attachments/assets/dfd9b163-68a6-4189-83c1-a2f87d8e217b)
 
 ### 日老婆
-效果图：![image](https://github.com/user-attachments/assets/cc8635ea-c5fe-4f15-b5a0-8ee27486e52c)
+效果图：
+
+![image](https://github.com/user-attachments/assets/cc8635ea-c5fe-4f15-b5a0-8ee27486e52c)
+
 ![image](https://github.com/user-attachments/assets/cf22b49f-80b0-45ac-a858-a0b9e0e90d02)
+
 暂时没有想到什么其他玩法，之前是准备引入AI，然后随机回复甜言蜜语，但是要比较好的提示词，不然回复很尬，可以参考我之前的aichat项目，自己简单加一个ai试试。
 
 ### 牛老婆&交换老婆(和之前一样)
 
 ### 用户档案
-@某人得到的回复：![image](https://github.com/user-attachments/assets/229cdd99-c38c-47bc-b9c7-83840ece8c2d)
-单独发送得到的回复：![image](https://github.com/user-attachments/assets/02b7c310-9287-4e10-ad3f-544cf2200147)
+@某人得到的回复：
+
+![image](https://github.com/user-attachments/assets/229cdd99-c38c-47bc-b9c7-83840ece8c2d)
+
+单独发送得到的回复：
+
+![image](https://github.com/user-attachments/assets/02b7c310-9287-4e10-ad3f-544cf2200147)
 
 ### 老婆档案
-单独发送得到的回复：![image](https://github.com/user-attachments/assets/1dbba44f-7aeb-4d1d-aef0-cd2aad1fbd28)
-后接模糊名称：![image](https://github.com/user-attachments/assets/46d46a47-2a07-4367-93ef-3bb4a276af33)
-后接精确名称：![image](https://github.com/user-attachments/assets/fe5b456a-d489-4213-83e1-b7783077e10a)![image](https://github.com/user-attachments/assets/e27d35d4-b034-420d-9709-125b6b739806)
+单独发送得到的回复：
+
+![image](https://github.com/user-attachments/assets/1dbba44f-7aeb-4d1d-aef0-cd2aad1fbd28)
+
+后接模糊名称：
+
+![image](https://github.com/user-attachments/assets/46d46a47-2a07-4367-93ef-3bb4a276af33)
+
+
+后接精确名称：
+
+![image](https://github.com/user-attachments/assets/fe5b456a-d489-4213-83e1-b7783077e10a)
+
+![image](https://github.com/user-attachments/assets/e27d35d4-b034-420d-9709-125b6b739806)
 
 ## 项目结构简析
 ```
