@@ -1,4 +1,7 @@
 import os, re, random, asyncio, hoshino
+import base64
+from PIL import Image, ImageFont
+from io import BytesIO
 from hoshino import Service, priv
 from hoshino.typing import CQEvent
 from hoshino.util import DailyNumberLimiter, FreqLimiter
@@ -20,7 +23,8 @@ from .utils import (
     restore_character_image,
     delete_image_and_empty_folder,
     get_card_by_uid_gid,
-    format_seconds
+    format_seconds,
+    img_path
 )
 #————————————————————基本参数————————————————————#
 # 创建一个全局的ExchangeManager实例，用于交换老婆和牛老婆的锁
@@ -58,21 +62,72 @@ _divorce_lmt= DailyNumberLimiter(_divorce_max)
 # 当超出次数时的提示
 _divorce_max_notice = f'本群每天只允许离婚{_divorce_max}次！'
 
+# ——————————————————————图鉴预加载配置——————————————————————#
+
+COL_NUM = 10  # 查看仓库时每行显示的卡片个数
+# 背景图路径
+__BASE = os.path.split(os.path.realpath(__file__))[0]
+FRAME_DIR_PATH = os.path.join(__BASE, 'image')
+# 老婆路径
+DIR_PATH = img_path
+# 文字路径，字体大小为16
+font = ImageFont.truetype(os.path.join(os.path.dirname(__file__), 'arial.ttf'), 16)
+card_file_names_all = []
+
+# 资源预检
+image_cache = {}
+# 列出DIR_PATH目录下所有的文件和文件夹名，存储在image_list列表中。
+# 卡池文件夹名称list
+pool_names = [entry for entry in os.listdir(DIR_PATH) if os.path.isdir(os.path.join(DIR_PATH, entry))]
+# 遍历每个子文件夹，并加载其中的图片
+for pool_name in pool_names:
+    pool_path = os.path.join(DIR_PATH, pool_name)
+    image_list = [f for f in os.listdir(pool_path) if os.path.isfile(os.path.join(pool_path, f))]
+    for image in image_list:
+        # 去除文件名后缀
+        file_name_without_ext = os.path.splitext(image)[0]
+        # 图像缓存
+        if True:
+            image_path = os.path.join(pool_path, image)
+            img = Image.open(image_path)
+            image_cache[file_name_without_ext] = img.convert('RGBA') if img.mode != 'RGBA' else img
+        # 将无后缀的文件名添加到card_file_names_all列表中
+        card_file_names_all.append(file_name_without_ext)
+# 将文件名添加到card_file_names_all列表中
+len_card = len(card_file_names_all)
+
+# 根据给定的图片路径pic_path和是否灰度化的标志grey来返回处理后的图片。
+def get_pic(pic_path, grey):
+    sign_image = image_cache[pic_path]
+    # if PRELOAD:
+    #     sign_image = image_cache[pic_path]
+    # else:
+    #     sign_image = Image.open(os.path.join(hoshino.config.RES_DIR, 'img', 'wife', pic_path))
+    # 图片被缩放到80x80像素，并应用抗锯齿算法
+    sign_image = sign_image.resize((80, 80), Image.ANTIALIAS)
+    # 如果grey为True，则将图片转换为灰度图。
+    if grey:
+        sign_image = sign_image.convert('L')
+    return sign_image
+
 #——————————————————————服务——————————————————————#
 
-sv_help = '''
+sv_help = f'''
 -[抽老婆] 看看今天的二次元老婆是谁
 -[添加老婆+人物名称+卡池名称(选填)+图片] 群管理员每天可以添加一次人物
 ※为防止bot被封号和数据污染请勿上传太涩与功能无关的图片※
 -[交换老婆] @某人 + 交换老婆
--[牛老婆] 50%概率牛到别人老婆(1次/日)
+[牛老婆] {ntr_possibility * 100}%概率牛到别人老婆({_ntr_max}次/日)
 -[查老婆] 加@某人可以查别人老婆，不加查自己
 -[离婚] 清楚当天老婆信息，可以重新抽老婆（管理）
 -[重置牛老婆] 加@某人可以重置别人牛的次数（管理）
 -[设置日老婆CD] 后接数字（管理）
 -[用户档案] 统计用户的一些数据，@某人可以查看他人的数据
+-[老婆图鉴] 查看老婆解锁情况，@某人可以查看他人的数据
 -[老婆档案] 统计老婆的一些数据，后接老婆名字可以查看具体角色的数据
 -[清理抽老婆用户] 清除不在的群和群成员(可能会很卡)（管理）
+———————————————以下仅限管理员—————————————————————————
+[更新老婆][删除老婆][重命名老婆]
 '''.strip()
 
 sv = Service(
@@ -88,14 +143,27 @@ sv = Service(
 #—————————————————————初始化—————————————————————#
 
 # 在插件启动时初始化和创建所需的表
-@hoshino.get_bot().server_app.before_serving
+bot = hoshino.get_bot()
+@bot.server_app.before_serving
 async def initialize_database():
     await init_db()
     # 角色表为空的时候初始化添加
     await init_characters()
+# 手动初始化，如果bot启动超时可以使用以下方法
+# @sv.on_prefix('初始化')
+# @sv.on_suffix('初始化')
+# async def initialize_database(bot, ev: CQEvent):
+#     # 获取QQ信息
+#     user_id = ev.user_id
+#     # 此注释的代码是仅限bot超级管理员使用，有需可启用并将下面判断权限的代码注释掉
+#     if user_id not in hoshino.config.SUPERUSERS:
+#         return
+#     await init_db()
+#     # 角色表为空的时候初始化添加
+#     await init_characters()
 
 # 关闭数据库连接
-@hoshino.get_bot().server_app.after_serving
+@bot.server_app.after_serving
 async def close_database():
     await close_engine()
 
@@ -497,11 +565,15 @@ async def ntr_wife(bot, ev: CQEvent):
                 await current_sv.add_or_update_current_character(ug, ug_target_wife)
                 # 目标用户当前老婆置空
                 await current_sv.remove_cid_by_user_group(ug_target)
-                await bot.send(ev, '你的阴谋已成功！', at_sender=True)
+                nick = await get_card_by_uid_gid(
+                    user_id=ug.user_id,
+                    group_id=ug.group_id
+                )
+                await bot.send(ev, f'你的阴谋已成功！已成功将 {nick} 的老婆占为己有', at_sender=True)
             else:
                 # 记录一次“牛老婆”动作,失败
                 await event_sv.add_double_event(ug, ug_target, ug_wife, ug_target_wife, "牛老婆", "失败")
-                await bot.send(ev, f'你的阴谋失败了，黄毛被干掉了', at_sender=True)
+                await bot.send(ev, f'你的阴谋失败了，黄毛被干掉了，黄毛被干掉了！你还有{_ntr_max - _ntr_lmt.get_num(key)}条命', at_sender=True)
             # 清除交换请求锁
             await ex_manager.remove_exchange(user_id, group_id)
             # 牛老婆次数减少
@@ -1439,3 +1511,88 @@ async def member_archive(bot, ev: CQEvent):
                 messages.append(f"- {nick} 从{succ_ntr_target_nick}牛到老婆次数最多，{succ_ntr_count}次")
 
             await bot.send(ev, "\n".join(messages), at_sender=True)
+
+#————————————————————图鉴相关————————————————————#
+@sv.on_prefix('老婆图鉴')
+@sv.on_suffix('老婆图鉴')
+async def storage(bot, ev: CQEvent):
+    # 获取QQ群、群用户QQ信息
+    group_id = ev.group_id
+    user_id = ev.user_id
+    # 命令频率限制
+    key = f"{group_id}_{user_id}"
+    if not _flmt.check(key):
+        await bot.send(ev, f'操作太频繁，请在{int(_flmt.left_time(key))}秒后再试')
+        return
+    _flmt.start_cd(key)
+
+    target_id = None
+    # 提取目标用户的QQ号
+    for seg in ev.message:
+        if seg.type == 'at' and seg.data['qq'] != 'all':
+            target_id = int(seg.data['qq'])
+            break
+    # 检查消息内容是否为空
+    if (target_id is None) and ev.message.extract_plain_text().strip() == "":
+        target_id = user_id
+    elif target_id is None:
+        return
+    async with AsyncSessionFactory() as session:
+        async with session.begin():
+            # 获得ug
+            ug_sv = await UserGroupSvFactory(session).create()
+            ug = await ug_sv.add_and_get_user_group(target_id, group_id)
+            nick = await get_card_by_uid_gid(
+                user_id=ug.user_id,
+                group_id=ug.group_id
+            )
+            # 数据统计服务
+            statistics_sv = await StatisticsSvFactory(session).create()
+            character_sv = await CharacterSvFactory(session).create()
+            # 获取老婆总数
+            total_wives_count = await character_sv.count()
+            # 获取老婆的ID列表
+            user_character_id = await statistics_sv.get_user_character_id(
+                user_group=ug,
+                event_type="抽老婆",
+                result="出新"
+            )
+            # 获取老婆的名字列表
+            user_character_name = await character_sv.get_character_name(user_character_id)
+            messages = [f"{nick} 的图鉴为："]
+            # 计算行数
+            row_num = len_card // COL_NUM if len_card % COL_NUM != 0 else len_card // COL_NUM - 1
+            # 得到背景图片
+            base = Image.open(FRAME_DIR_PATH + '/frame.png')
+            # 调整图像大小:
+            base = base.resize((40 + COL_NUM * 80 + (COL_NUM - 1) * 10, 150 + row_num * 80 + (row_num - 1) * 10),
+                               Image.ANTIALIAS)
+            # 初始化行索引偏移和行偏移:
+            row_index_offset = 0
+            row_offset = 0
+            # 卡片文件名列表:
+            cards_list = card_file_names_all
+            for index, FileName in enumerate(cards_list):
+                row_index = index // COL_NUM + row_index_offset
+                col_index = index % COL_NUM
+                # 直接检查FileName是否在cards_num中
+                f = get_pic(FileName, False) if (FileName in user_character_name) else get_pic(FileName, True)
+                base.paste(f, (
+                    30 + col_index * 80 + (col_index - 1) * 10,
+                    row_offset + 40 + row_index * 80 + (row_index - 1) * 10
+                ))
+            row_offset += 30
+            buf = BytesIO()
+            base = base.convert('RGB')
+            base.save(buf, format='JPEG')
+            base64_str = f'base64://{base64.b64encode(buf.getvalue()).decode()}'
+            messages.append(f"[CQ:image,file={base64_str}]")
+
+            # 用户解锁的总数
+            drawn_wives_count = await statistics_sv.get_single_event_count(
+                user_group=ug,
+                event_type="抽老婆",
+                result="出新"
+            )
+            messages.append(f"图鉴完成度: {drawn_wives_count} / {total_wives_count}")
+            await bot.send(ev, "\n".join(messages))

@@ -1,4 +1,4 @@
-from typing import Optional, Tuple, Union
+from typing import Optional, Tuple, Union, List
 from domain.entities import UserGroup, Character, ActionType, AcqMethod
 from infrastructure.repositories import (
     SingleRepository, 
@@ -142,11 +142,23 @@ class StatisticsApplicationService:
         user_group: UserGroup,
         event_type: str,
         result: Optional[str] = None,
-        character_id: Optional[int] = None
     ) -> int:
-        return await self.single_repo.get_event_count_by_user_group_id(
+        # 使用数据去重的函数，以适配保留导入旧数据库的抽卡结果
+        return await self.single_repo.get_unique_character_count_by_user_group_id(
             user_group_id=user_group.id,
             event_type=event_type,
             result=result,
-            character_id=character_id
+        )
+
+    async def get_user_character_id(
+        self,
+        user_group: UserGroup,
+        event_type: str,
+        result: Optional[str] = None,
+    ) -> List[int]:
+        # 获取抽卡ID
+        return await self.single_repo.get_character_id_by_user_group_id(
+            user_group_id=user_group.id,
+            event_type=event_type,
+            result=result,
         )
