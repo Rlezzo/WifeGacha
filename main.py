@@ -140,6 +140,9 @@ async def darw_wife(bot, ev: CQEvent):
             return
         else:
             user_id=target_id
+    elif ev.message.extract_plain_text().strip() != "":
+        # 群友谈论关键词
+        return
         
     async with AsyncSessionFactory() as session:
         async with session.begin():
@@ -348,6 +351,9 @@ async def exchange_wife(bot, ev: CQEvent):
             target_id = int(seg.data['qq'])
             break
     if not target_id:
+        if ev.message.extract_plain_text().strip() != "":
+            # 谈论交换老婆
+            return
         await bot.send(ev, '你想和谁交换？请@他', at_sender=True)
         return    
     # 检查是否尝试交换给自己
@@ -456,6 +462,8 @@ async def ntr_wife(bot, ev: CQEvent):
             target_id = int(seg.data['qq'])
             break
     if not target_id:
+        if ev.message.extract_plain_text().strip() != "":
+            return
         await bot.send(ev, '请@一个要下手的目标', at_sender=True)
         return
     # 检查是否尝试交换给自己
@@ -867,6 +875,9 @@ async def reset_darw_wife(bot, ev: CQEvent):
             return
         else:
             user_id=target_id
+    elif ev.message.extract_plain_text().strip() != "":
+        # 群友谈论离婚
+        return
     
     async with AsyncSessionFactory() as session:
         async with session.begin():
