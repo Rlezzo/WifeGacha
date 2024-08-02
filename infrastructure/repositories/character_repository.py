@@ -35,6 +35,6 @@ class CharacterRepository(ABC):
     async def count(self) -> int:
         pass
     
-    abstractmethod
+    @abstractmethod
     async def search_character_by_partial_name(self, name: str) -> List[str]:
         pass
