@@ -1578,7 +1578,7 @@ async def atlas(bot, ev: CQEvent):
                 messages = [f"{nick} 的图鉴(含NTR)为："]
                 # 获取牛老婆成功的ID列表
                 user_NTR_true_character_id = await statistics_sv.get_user_NTR_true_character_id(
-                    user_group=ug,
+                    initiator_ug=ug,
                     event_type="牛老婆",
                     result="成功"
                 )
@@ -1637,4 +1637,4 @@ async def switch_atlas_ntr(bot, ev: CQEvent):
     save_ntr_atlas_statuses()
     load_ntr_atlas_statuses()
     # 提示信息
-    await bot.send(ev, 'NTR功能已' + ('开启' if ntr_atlas_statuses[group_id] else '关闭'), at_sender=True)
+    await bot.send(ev, '图鉴统计NTR已' + ('开启' if ntr_atlas_statuses[group_id] else '关闭'), at_sender=True)

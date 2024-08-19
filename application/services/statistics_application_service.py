@@ -167,13 +167,13 @@ class StatisticsApplicationService:
     # 获得牛老婆成功取所得的老婆ID
     async def get_user_NTR_true_character_id(
         self,
-        user_group: UserGroup,
+        initiator_ug: UserGroup,
         event_type: str,
         result: Optional[str] = None
     ) -> List[int]:
         # 获取抽卡ID
         return await self.double_repo.get_current_receiver_character_id_by_action_initiator_user_group_id(
-            user_group_id=user_group.id,
+            action_initiator_user_group_id=initiator_ug.id,
             event_type=event_type,
             result=result,
         )

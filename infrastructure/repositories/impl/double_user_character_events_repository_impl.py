@@ -147,14 +147,14 @@ class DoubleUserCharacterEventRepositoryImpl(DoubleRepository):
 
     async def get_current_receiver_character_id_by_action_initiator_user_group_id(
         self,
-        user_group_id: int,
+        action_initiator_user_group_id: int,
         event_type: str,
         result: Optional[str] = None,
     ) -> List[int]:
         # 构造查询
         stmt = (
             select(distinct(DoubleORM.receiver_current_character_id))  # 使用 distinct 来获取不同的 receiver_current_character_id
-            .filter(DoubleORM.user_group_id == user_group_id)
+            .filter(DoubleORM.action_initiator_user_group_id == action_initiator_user_group_id)
             .filter(DoubleORM.event_type == event_type)
         )
         # 如果指定了 result，则添加相应的过滤条件

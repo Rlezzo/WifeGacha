@@ -53,7 +53,7 @@ class DoubleUserCharacterEventRepository(ABC):
     @abstractmethod
     async def get_current_receiver_character_id_by_action_initiator_user_group_id(
         self,
-        user_group_id: int,
+        action_initiator_user_group_id: int,
         event_type: str,
         result: Optional[str] = None,
     ) -> List[int]:
