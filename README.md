@@ -10,7 +10,6 @@ GPT说，用sqlalchemyORM和DDD领域设计模式，很方便！
 然后GPT传授了我一些完全搞不懂的东西，但是没办法，只能硬着头皮干了，干一点问一点，问一点干一点，于是不是程序员的我写出来了这个项目。
 
 
-老婆图鉴功能参考[login_bonus](https://github.com/SonderXiaoming/login_bonus) 
 
 ## 如何安装
 
@@ -65,6 +64,7 @@ wife文件夹下有default、kotone等卡池文件夹，可以按照卡池分类
 -[老婆图鉴] 查看老婆解锁情况，@某人可以查看他人的数据
 -[老婆档案] 统计老婆的一些数据，后接老婆名字可以查看具体角色的数据
 -[清理抽老婆用户] 清除不在的群和群成员(可能会很卡)（管理）
+-[切换NTR图鉴开关状态] 开启图鉴统计NTR所得
 ```
 ### 抽老婆
 效果图：
@@ -272,9 +272,10 @@ bot = hoshino.get_bot()
 
 NapCat1.6.0以及之后的版本会出现subType报错，目前不清楚如何解决
 
-该插件使用到的某些特性在python3.8是不支持的如 tuple[str, str]。如果你使用的是python3.8的环境运行bot将可能无法使用该插件。请使用旧版插件[AnimeWifeDB](https://github.com/Rlezzo/AnimeWife/tree/AnimeWifeDB)
+该插件使用到的某些特性在python3.8是不支持的如 tuple[str, str]。如果你使用的是python3.8的环境运行bot将可能无法使用该插件。
 
-
-
+## 更新日志
+2024年8月1日    添加老婆图鉴的功能。老婆图鉴功能参考[login_bonus](https://github.com/SonderXiaoming/login_bonus) 
+2024年8月19日   添加切换NTR图鉴开关状态，开启后老婆图鉴将点亮你NTR到的老婆（牛牛牛，还在牛）
 
 
