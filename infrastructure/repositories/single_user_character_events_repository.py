@@ -36,15 +36,6 @@ class SingleUserCharacterEventRepository(ABC):
         pass
 
     @abstractmethod
-    async def get_unique_character_count_by_user_group_id(
-        self,
-        user_group_id: int,
-        event_type: str,
-        result: Optional[str] = None,
-    ) -> int:
-        pass
-
-    @abstractmethod
     async def get_character_id_by_user_group_id(
         self,
         user_group_id: int,

@@ -93,7 +93,8 @@ class SingleUserCharacterEventRepositoryImpl(SingleRepository):
     ) -> int:
         stmt = (
             select(
-                func.count(SingleORM.id).label('event_count')
+                # 去除重复项
+                func.count(distinct(SingleORM.character_id)).label('unique_character_count')
             )
             .filter(SingleORM.user_group_id == user_group_id)
             .filter(SingleORM.event_type == event_type)
@@ -110,30 +111,6 @@ class SingleUserCharacterEventRepositoryImpl(SingleRepository):
             return row.event_count
         return 0
 
-    async def get_unique_character_count_by_user_group_id(
-            self,
-            user_group_id: int,
-            event_type: str,
-            result: Optional[str] = None
-    ) -> int:
-        # 构造查询
-        stmt = (
-            select(
-                func.count(distinct(SingleORM.character_id)).label('unique_character_count')
-            )
-            .filter(SingleORM.user_group_id == user_group_id)
-            .filter(SingleORM.event_type == event_type)
-        )
-        # 如果指定了 result，则添加相应的过滤条件
-        if result:
-            stmt = stmt.filter(SingleORM.result == result)
-        # 执行查询
-        result = await self.session.execute(stmt)
-        row = result.fetchone()
-        # 处理查询结果
-        if row:
-            return row.unique_character_count  # 如果 row 存在，则直接返回 unique_character_count，无需再检查是否为 0
-        return 0
 
     async def get_character_id_by_user_group_id(
         self,
