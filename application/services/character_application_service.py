@@ -52,7 +52,7 @@ class CharacterApplicationService:
         # 没找到，模糊匹配
         return await self.character_repository.search_character_by_partial_name(name)
 
-    async def get_character_name(
+    async def get_character_names_by_ids(
             self,
             character_id: List[int]
     ) -> List[str]:

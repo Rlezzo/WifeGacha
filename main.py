@@ -574,8 +574,8 @@ async def ntr_wife(bot, ev: CQEvent):
                 # 目标用户当前老婆置空
                 await current_sv.remove_cid_by_user_group(ug_target)
                 nick = await get_card_by_uid_gid(
-                    user_id=ug.user_id,
-                    group_id=ug.group_id
+                    user_id=target_id,
+                    group_id=group_id
                 )
                 await bot.send(ev, f'你的阴谋已成功！已成功将 {nick} 的老婆占为己有', at_sender=True)
             else:
@@ -1569,7 +1569,7 @@ async def storage(bot, ev: CQEvent):
                 result="出新"
             )
             # 获取老婆的名字列表
-            user_character_name = await character_sv.get_character_name(user_character_id)
+            user_character_name = await character_sv.get_character_names_by_ids(user_character_id)
             messages = [f"{nick} 的图鉴为："]
             # 计算行数
             row_num = len_card // COL_NUM if len_card % COL_NUM != 0 else len_card // COL_NUM - 1
