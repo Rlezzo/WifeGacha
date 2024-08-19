@@ -25,7 +25,6 @@ from .utils import (
     get_card_by_uid_gid,
     format_seconds,
     img_path,
-    ntr_atlas_statuses,
     load_ntr_atlas_statuses,
     save_ntr_atlas_statuses
 )
@@ -65,7 +64,8 @@ _divorce_lmt= DailyNumberLimiter(_divorce_max)
 # 当超出次数时的提示
 _divorce_max_notice = f'本群每天只允许离婚{_divorce_max}次！'
 # 在程序启动时调用：载入NTR图鉴状态
-load_ntr_atlas_statuses()
+# 用来存储所有群组的NTR图鉴状态的路径和状态
+ntr_atlas_status_file = 'ntr_atlas_status.json'
 
 # ——————————————————————图鉴预加载配置——————————————————————#
 
@@ -1572,6 +1572,8 @@ async def atlas(bot, ev: CQEvent):
                 event_type="抽老婆",
                 result="出新"
             )
+            # 加载当前状态
+            ntr_atlas_statuses = load_ntr_atlas_statuses(ntr_atlas_status_file)
             if not ntr_atlas_statuses.get(str(group_id), False):
                 messages = [f"{nick} 的图鉴为："]
             else:
@@ -1626,15 +1628,20 @@ async def atlas(bot, ev: CQEvent):
 # 开启后档案和图鉴的解锁数量将统计NTR所得
 @sv.on_fullmatch(("切换NTR图鉴开关状态", "切换ntr图鉴开关状态"))
 async def switch_atlas_ntr(bot, ev: CQEvent):
-    # 判断权限，只有用户为群管理员或为bot设置的超级管理员才能使用
-    u_priv = priv.get_user_priv(ev)
-    if u_priv < sv.manage_priv:
+    if not check_manage_priv(ev):
         return
     group_id = str(ev.group_id)
-    # 取反群的NTR状态
+    # 加载当前状态
+    ntr_atlas_statuses = load_ntr_atlas_statuses(ntr_atlas_status_file)
+    # 切换状态
     ntr_atlas_statuses[group_id] = not ntr_atlas_statuses.get(group_id, False)
-    # 保存到文件
-    save_ntr_atlas_statuses()
-    load_ntr_atlas_statuses()
-    # 提示信息
+    # 保存状态
+    save_ntr_atlas_statuses(ntr_atlas_statuses, ntr_atlas_status_file)
+    # 发送消息
     await bot.send(ev, '图鉴统计NTR已' + ('开启' if ntr_atlas_statuses[group_id] else '关闭'), at_sender=True)
+
+
+def check_manage_priv(ev):
+    """检查用户是否有管理员权限"""
+    u_priv = priv.get_user_priv(ev)
+    return u_priv >= sv.manage_priv
