@@ -151,7 +151,8 @@ class StatisticsApplicationService:
             character_id=character_id
         )
 
-    async def get_user_character_id(
+    # 获得用户抽老婆得到的所有老婆ID
+    async def get_user_character_ids(
         self,
         user_group: UserGroup,
         event_type: str,

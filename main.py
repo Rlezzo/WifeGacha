@@ -1567,7 +1567,7 @@ async def atlas(bot, ev: CQEvent):
             # 获取老婆总数
             total_wives_count = await character_sv.count()
             # 获取抽老婆的ID列表
-            user_character_id = await statistics_sv.get_user_character_id(
+            user_character_id = await statistics_sv.get_user_character_ids(
                 user_group=ug,
                 event_type="抽老婆",
                 result="出新"
