@@ -1,4 +1,4 @@
-import asyncio, os, mimetypes, aiohttp, aiofiles
+import asyncio, os, mimetypes, aiohttp, aiofiles, json
 from datetime import datetime, timedelta
 from html import unescape
 from PIL import Image, UnidentifiedImageError
@@ -11,6 +11,9 @@ from domain.entities import AcqMethod, Character
 from infrastructure.database.connection import AsyncSessionFactory
 
 img_path = os.path.join(os.path.expanduser(RES_DIR), 'img', 'wife')
+ntr_atlas_status_file = os.path.join(os.path.dirname(__file__), 'config', 'ntr_atlas_status.json')
+# 用来存储所有群组的NTR图鉴状态
+ntr_atlas_statuses = {}
 
 async def init_characters():
     # 初始化加载老婆数据
@@ -248,3 +251,24 @@ def format_seconds(seconds: float) -> str:
         return f"{minutes}分{remaining_seconds}秒"
     else:
         return f"{remaining_seconds}秒"
+
+
+#————————————————————切换NTR开关初始化————————————————————#
+# 载入NTR图鉴状态
+def load_ntr_atlas_statuses():
+    global ntr_atlas_statuses
+    # 检查文件是否存在
+    if not os.path.exists(ntr_atlas_status_file):
+        # 文件不存在，则创建空的状态文件
+        with open(ntr_atlas_status_file, 'w', encoding='utf-8') as f:
+            json.dump({}, f, ensure_ascii=False, indent=4)
+        ntr_atlas_statuses = {}
+    else:
+        # 文件存在，读取内容到ntr_statuses
+        with open(ntr_atlas_status_file, 'r', encoding='utf-8') as f:
+            ntr_atlas_statuses = json.load(f)
+
+def save_ntr_atlas_statuses():
+    with open(ntr_atlas_status_file, 'w', encoding='utf-8') as f:
+        json.dump(ntr_atlas_statuses, f, ensure_ascii=False, indent=4)
+

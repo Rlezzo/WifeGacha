@@ -24,7 +24,10 @@ from .utils import (
     delete_image_and_empty_folder,
     get_card_by_uid_gid,
     format_seconds,
-    img_path
+    img_path,
+    ntr_atlas_statuses,
+    load_ntr_atlas_statuses,
+    save_ntr_atlas_statuses
 )
 #————————————————————基本参数————————————————————#
 # 创建一个全局的ExchangeManager实例，用于交换老婆和牛老婆的锁
@@ -61,6 +64,8 @@ _divorce_max=1
 _divorce_lmt= DailyNumberLimiter(_divorce_max)
 # 当超出次数时的提示
 _divorce_max_notice = f'本群每天只允许离婚{_divorce_max}次！'
+# 在程序启动时调用：载入NTR图鉴状态
+load_ntr_atlas_statuses()
 
 # ——————————————————————图鉴预加载配置——————————————————————#
 
@@ -96,13 +101,10 @@ for pool_name in pool_names:
 # 将文件名添加到card_file_names_all列表中
 len_card = len(card_file_names_all)
 
+
 # 根据给定的图片路径pic_path和是否灰度化的标志grey来返回处理后的图片。
 def get_pic(pic_path, grey):
     sign_image = image_cache[pic_path]
-    # if PRELOAD:
-    #     sign_image = image_cache[pic_path]
-    # else:
-    #     sign_image = Image.open(os.path.join(hoshino.config.RES_DIR, 'img', 'wife', pic_path))
     # 图片被缩放到80x80像素，并应用抗锯齿算法
     sign_image = sign_image.resize((80, 80), Image.ANTIALIAS)
     # 如果grey为True，则将图片转换为灰度图。
@@ -117,7 +119,7 @@ sv_help = f'''
 -[添加老婆+人物名称+卡池名称(选填)+图片] 群管理员每天可以添加一次人物
 ※为防止bot被封号和数据污染请勿上传太涩与功能无关的图片※
 -[交换老婆] @某人 + 交换老婆
-[牛老婆] {ntr_possibility * 100}%概率牛到别人老婆({_ntr_max}次/日)
+-[牛老婆] {ntr_possibility * 100}%概率牛到别人老婆({_ntr_max}次/日)
 -[查老婆] 加@某人可以查别人老婆，不加查自己
 -[离婚] 清楚当天老婆信息，可以重新抽老婆（管理）
 -[重置牛老婆] 加@某人可以重置别人牛的次数（管理）
@@ -126,6 +128,7 @@ sv_help = f'''
 -[老婆图鉴] 查看老婆解锁情况，@某人可以查看他人的数据
 -[老婆档案] 统计老婆的一些数据，后接老婆名字可以查看具体角色的数据
 -[清理抽老婆用户] 清除不在的群和群成员(可能会很卡)（管理）
+-[切换NTR图鉴开关状态] 开启图鉴统计NTR所得
 ———————————————以下仅限管理员—————————————————————————
 [更新老婆][删除老婆][重命名老婆]
 '''.strip()
@@ -149,7 +152,7 @@ async def initialize_database():
     await init_db()
     # 角色表为空的时候初始化添加
     await init_characters()
-# 手动初始化，如果bot启动超时可以使用以下方法
+# 手动初始化，如果首次启动bot超时可以使用以下方法
 # @sv.on_prefix('初始化')
 # @sv.on_suffix('初始化')
 # async def initialize_database(bot, ev: CQEvent):
@@ -1526,7 +1529,7 @@ async def member_archive(bot, ev: CQEvent):
 #————————————————————图鉴相关————————————————————#
 @sv.on_prefix('老婆图鉴')
 @sv.on_suffix('老婆图鉴')
-async def storage(bot, ev: CQEvent):
+async def atlas(bot, ev: CQEvent):
     # 获取QQ群、群用户QQ信息
     group_id = ev.group_id
     user_id = ev.user_id
@@ -1548,6 +1551,7 @@ async def storage(bot, ev: CQEvent):
         target_id = user_id
     elif target_id is None:
         return
+
     async with AsyncSessionFactory() as session:
         async with session.begin():
             # 获得ug
@@ -1562,15 +1566,32 @@ async def storage(bot, ev: CQEvent):
             character_sv = await CharacterSvFactory(session).create()
             # 获取老婆总数
             total_wives_count = await character_sv.count()
-            # 获取老婆的ID列表
+            # 获取抽老婆的ID列表
             user_character_id = await statistics_sv.get_user_character_id(
                 user_group=ug,
                 event_type="抽老婆",
                 result="出新"
             )
+            if not ntr_atlas_statuses.get(str(group_id), False):
+                messages = [f"{nick} 的图鉴为："]
+            else:
+                messages = [f"{nick} 的图鉴(含NTR)为："]
+                # 获取牛老婆成功的ID列表
+                user_NTR_true_character_id = await statistics_sv.get_user_NTR_true_character_id(
+                    user_group=ug,
+                    event_type="牛老婆",
+                    result="成功"
+                )
+                # 合并老婆列表
+                user_character_id += user_NTR_true_character_id
+                # 转换成集合以去除重复项
+                user_character_id_set = set(user_character_id)
+                # 转换回列表
+                user_character_id = list(user_character_id_set)
             # 获取老婆的名字列表
             user_character_name = await character_sv.get_character_names_by_ids(user_character_id)
-            messages = [f"{nick} 的图鉴为："]
+            # 用户解锁的总数
+            drawn_wives_count = len(user_character_name)
             # 计算行数
             row_num = len_card // COL_NUM if len_card % COL_NUM != 0 else len_card // COL_NUM - 1
             # 得到背景图片
@@ -1598,12 +1619,22 @@ async def storage(bot, ev: CQEvent):
             base.save(buf, format='JPEG')
             base64_str = f'base64://{base64.b64encode(buf.getvalue()).decode()}'
             messages.append(f"[CQ:image,file={base64_str}]")
-
-            # 用户解锁的总数
-            drawn_wives_count = await statistics_sv.get_single_event_count(
-                user_group=ug,
-                event_type="抽老婆",
-                result="出新"
-            )
             messages.append(f"图鉴完成度: {drawn_wives_count} / {total_wives_count}")
             await bot.send(ev, "\n".join(messages))
+
+#————————————————————功能：切换NTR图鉴开关————————————————————#
+# 开启后档案和图鉴的解锁数量将统计NTR所得
+@sv.on_fullmatch(("切换NTR图鉴开关状态", "切换ntr图鉴开关状态"))
+async def switch_atlas_ntr(bot, ev: CQEvent):
+    # 判断权限，只有用户为群管理员或为bot设置的超级管理员才能使用
+    u_priv = priv.get_user_priv(ev)
+    if u_priv < sv.manage_priv:
+        return
+    group_id = str(ev.group_id)
+    # 取反群的NTR状态
+    ntr_atlas_statuses[group_id] = not ntr_atlas_statuses.get(group_id, False)
+    # 保存到文件
+    save_ntr_atlas_statuses()
+    load_ntr_atlas_statuses()
+    # 提示信息
+    await bot.send(ev, 'NTR功能已' + ('开启' if ntr_atlas_statuses[group_id] else '关闭'), at_sender=True)

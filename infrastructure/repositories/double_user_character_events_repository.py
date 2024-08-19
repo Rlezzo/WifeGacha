@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from typing import Optional, Tuple
+from typing import Optional, Tuple, List
 from domain.entities import DoubleEvent
 
 class DoubleUserCharacterEventRepository(ABC):
@@ -48,4 +48,13 @@ class DoubleUserCharacterEventRepository(ABC):
         is_user_receiver: bool = False,
         is_character_receiver: bool = True
     ) -> int:
+        pass
+
+    @abstractmethod
+    async def get_current_receiver_character_id_by_action_initiator_user_group_id(
+        self,
+        user_group_id: int,
+        event_type: str,
+        result: Optional[str] = None,
+    ) -> List[int]:
         pass
