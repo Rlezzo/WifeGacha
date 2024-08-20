@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from typing import Optional, Tuple
+from typing import Optional, Tuple, List
 from domain.entities import SingleEvent
 
 class SingleUserCharacterEventRepository(ABC):
@@ -33,4 +33,13 @@ class SingleUserCharacterEventRepository(ABC):
         result: Optional[str] = None,
         character_id: Optional[int] = None
     ) -> int:
+        pass
+
+    @abstractmethod
+    async def get_character_id_by_user_group_id(
+        self,
+        user_group_id: int,
+        event_type: str,
+        result: Optional[str] = None,
+    ) -> List[int]:
         pass

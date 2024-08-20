@@ -74,3 +74,12 @@ class CharacterRepositoryImpl(CharacterRepository):
         
         suggested_names = [char_orm.name for char_orm in characters_orm]
         return suggested_names
+
+    async def get_character_name_by_character_id(
+        self,
+        character_id: List[int]
+    ) -> List[str]:
+        stmt = select(CharacterORM.name).where(CharacterORM.id.in_(character_id))
+        result = await self.session.execute(stmt)
+        names = [record.name for record in result]
+        return names

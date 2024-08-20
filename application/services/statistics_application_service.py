@@ -1,4 +1,4 @@
-from typing import Optional, Tuple, Union
+from typing import Optional, Tuple, Union, List
 from domain.entities import UserGroup, Character, ActionType, AcqMethod
 from infrastructure.repositories import (
     SingleRepository, 
@@ -149,4 +149,32 @@ class StatisticsApplicationService:
             event_type=event_type,
             result=result,
             character_id=character_id
+        )
+
+    # 获得用户抽老婆得到的所有老婆ID
+    async def get_user_character_ids(
+        self,
+        user_group: UserGroup,
+        event_type: str,
+        result: Optional[str] = None
+    ) -> List[int]:
+        # 获取抽卡ID
+        return await self.single_repo.get_character_id_by_user_group_id(
+            user_group_id=user_group.id,
+            event_type=event_type,
+            result=result,
+        )
+
+    # 获得牛老婆成功取所得的老婆ID
+    async def get_user_NTR_true_character_id(
+        self,
+        initiator_ug: UserGroup,
+        event_type: str,
+        result: Optional[str] = None
+    ) -> List[int]:
+        # 获取抽卡ID
+        return await self.double_repo.get_current_receiver_character_id_by_action_initiator_user_group_id(
+            action_initiator_user_group_id=initiator_ug.id,
+            event_type=event_type,
+            result=result,
         )

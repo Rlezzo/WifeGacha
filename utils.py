@@ -1,4 +1,4 @@
-import asyncio, os, mimetypes, aiohttp, aiofiles
+import asyncio, os, mimetypes, aiohttp, aiofiles, json
 from datetime import datetime, timedelta
 from html import unescape
 from PIL import Image, UnidentifiedImageError
@@ -248,3 +248,21 @@ def format_seconds(seconds: float) -> str:
         return f"{minutes}分{remaining_seconds}秒"
     else:
         return f"{remaining_seconds}秒"
+
+
+#————————————————————切换NTR开关初始化————————————————————#
+# 载入NTR图鉴状态
+def load_ntr_atlas_statuses(filename):
+    file_path = os.path.join(os.path.dirname(__file__), 'config', filename)
+    try:
+        # 文件存在，读取内容到ntr_atlas_statuses
+        with open(file_path, 'r', encoding='utf-8') as f:
+            ntr_atlas_statuses = json.load(f)
+    except FileNotFoundError:
+        ntr_atlas_statuses = {}
+    return ntr_atlas_statuses
+
+def save_ntr_atlas_statuses(statuses, filename):
+    file_path = os.path.join(os.path.dirname(__file__), 'config', filename)
+    with open(file_path, 'w', encoding='utf-8') as f:
+        json.dump(statuses, f, ensure_ascii=False, indent=4)
