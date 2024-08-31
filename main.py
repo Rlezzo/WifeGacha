@@ -68,7 +68,7 @@ _divorce_max_notice = f'本群每天只允许离婚{_divorce_max}次！'
 ntr_atlas_status_file = 'ntr_atlas_status.json'
 
 # ——————————————————————图鉴预加载配置——————————————————————#
-PRELOAD = False  # 是否在启动时直接将所有图片加载到内存中，开启后可以提高查看仓库的速度但会增加内存的占用
+PRELOAD = True  # 是否在启动时直接将所有图片加载到内存中，开启后可以提高查看仓库的速度但会增加内存的占用(大约十几M)
 COL_NUM = 10  # 查看仓库时每行显示的卡片个数
 # 背景图路径
 __BASE = os.path.split(os.path.realpath(__file__))[0]
@@ -95,10 +95,15 @@ for pool_name in pool_names:
         if PRELOAD:
             image_path = os.path.join(pool_path, image)
             img = Image.open(image_path)
-            image_cache[file_name_without_ext] = img.convert('RGBA') if img.mode != 'RGBA' else img
+            # 缩放图片到80x80像素
+            img = img.resize((80, 80), Image.ANTIALIAS)
+            # 转换为RGBA模式（如果需要）
+            img = img.convert('RGBA')
+            # 存储到缓存中
+            image_cache[file_name_without_ext] = img
         # 将无后缀的文件名添加到card_file_names_all列表中
         card_file_names_all.append(file_name_without_ext)
-# 将文件名添加到card_file_names_all列表中
+# 保存输出文件名列表的长度
 len_card = len(card_file_names_all)
 
 
