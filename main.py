@@ -68,7 +68,7 @@ _divorce_max_notice = f'本群每天只允许离婚{_divorce_max}次！'
 ntr_atlas_status_file = 'ntr_atlas_status.json'
 
 # ——————————————————————图鉴预加载配置——————————————————————#
-
+PRELOAD = False  # 是否在启动时直接将所有图片加载到内存中，开启后可以提高查看仓库的速度但会增加内存的占用
 COL_NUM = 10  # 查看仓库时每行显示的卡片个数
 # 背景图路径
 __BASE = os.path.split(os.path.realpath(__file__))[0]
@@ -92,7 +92,7 @@ for pool_name in pool_names:
         # 去除文件名后缀
         file_name_without_ext = os.path.splitext(image)[0]
         # 图像缓存
-        if True:
+        if PRELOAD:
             image_path = os.path.join(pool_path, image)
             img = Image.open(image_path)
             image_cache[file_name_without_ext] = img.convert('RGBA') if img.mode != 'RGBA' else img
@@ -104,7 +104,19 @@ len_card = len(card_file_names_all)
 
 # 根据给定的图片路径pic_path和是否灰度化的标志grey来返回处理后的图片。
 def get_pic(pic_path, grey):
-    sign_image = image_cache[pic_path]
+    if PRELOAD:
+        sign_image = image_cache[pic_path]
+    else:
+        # 构造基础路径
+        base_path = os.path.join(DIR_PATH)
+        # 在每个子文件夹中搜索图片
+        for pool_name in pool_names:
+            pool_path = os.path.join(base_path, pool_name)
+            for entry in os.listdir(pool_path):
+                if entry.startswith(pic_path):
+                    # 找到图片，加载并处理
+                    image_path = os.path.join(pool_path, entry)
+                    sign_image = Image.open(image_path)
     # 图片被缩放到80x80像素，并应用抗锯齿算法
     sign_image = sign_image.resize((80, 80), Image.ANTIALIAS)
     # 如果grey为True，则将图片转换为灰度图。
