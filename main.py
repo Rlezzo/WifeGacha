@@ -97,7 +97,7 @@ for pool_name in pool_names:
             img = Image.open(image_path)
             # 缩放图片到80x80像素
             img = img.resize((80, 80), Image.ANTIALIAS)
-            # 转换为RGBA模式（如果需要）
+            # 转换为RGBA模式
             img = img.convert('RGBA')
             # 存储到缓存中
             image_cache[file_name_without_ext] = img
