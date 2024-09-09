@@ -506,6 +506,8 @@ async def ntr_wife(bot, ev: CQEvent):
                 # 目标用户当前老婆置空
                 await current_sv.remove_cid_by_user_group(ug_target)
                 await bot.send(ev, '你的阴谋已成功！', at_sender=True)
+                # 被牛走的人，补偿一次牛老婆机会
+                _ntr_lmt.increase(f"{ug_target.user_id}_{group_id}", int(-1))
             else:
                 # 记录一次“牛老婆”动作,失败
                 await event_sv.add_double_event(ug, ug_target, ug_wife, ug_target_wife, "牛老婆", "失败")
