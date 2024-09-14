@@ -416,7 +416,9 @@ async def ex_wife_reply(bot, ev: CQEvent):
         agree_index = keyword.find('同意')
         disagree_index = keyword.find('不同意')
         refuse_index = keyword.find('拒绝')
-
+        # 如果“同意”、“不同意”和“拒绝”都没有出现，则什么都不做
+        if agree_index == -1 and disagree_index == -1 and refuse_index == -1:
+            return
         # 找出“不同意”和“拒绝”首次出现的位置
         disagree_first_index = min(filter(lambda x: x != -1, [disagree_index, refuse_index]), default=-1)
 
