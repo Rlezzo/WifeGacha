@@ -165,16 +165,30 @@ class StatisticsApplicationService:
             result=result,
         )
 
-    # 获得牛老婆成功取所得的老婆ID
-    async def get_user_NTR_true_character_id(
+    # 获得发起者（牛老婆/交换老婆）成功取所得的老婆ID
+    async def get_user_initiator_character_ids(
         self,
         initiator_ug: UserGroup,
         event_type: str,
         result: Optional[str] = None
     ) -> List[int]:
         # 获取抽卡ID
-        return await self.double_repo.get_current_receiver_character_id_by_action_initiator_user_group_id(
+        return await self.double_repo.get_receiver_current_character_ids_by_action_initiator_user_group_id(
             action_initiator_user_group_id=initiator_ug.id,
+            event_type=event_type,
+            result=result,
+        )
+
+    # 获得同意者（交换老婆）成功取所得的老婆ID
+    async def get_user_receiver_character_ids(
+        self,
+        receiver_ug: UserGroup,
+        event_type: str,
+        result: Optional[str] = None
+    ) -> List[int]:
+        # 获取抽卡ID
+        return await self.double_repo.get_initiator_current_character_ids_by_action_receiver_user_group_id(
+            action_receiver_user_group_id=receiver_ug.id,
             event_type=event_type,
             result=result,
         )

@@ -51,10 +51,19 @@ class DoubleUserCharacterEventRepository(ABC):
         pass
 
     @abstractmethod
-    async def get_current_receiver_character_id_by_action_initiator_user_group_id(
+    async def get_receiver_current_character_ids_by_action_initiator_user_group_id(
         self,
         action_initiator_user_group_id: int,
         event_type: str,
         result: Optional[str] = None,
+    ) -> List[int]:
+        pass
+
+    @abstractmethod
+    async def get_initiator_current_character_ids_by_action_receiver_user_group_id(
+           self,
+           action_receiver_user_group_id: int,
+           event_type: str,
+           result: Optional[str] = None
     ) -> List[int]:
         pass

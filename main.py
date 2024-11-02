@@ -1599,14 +1599,26 @@ async def atlas(bot, ev: CQEvent):
                 messages = [f"{nick} 的图鉴为："]
             else:
                 messages = [f"{nick} 的图鉴(含NTR)为："]
-                # 获取牛老婆成功的ID列表
-                user_NTR_true_character_id = await statistics_sv.get_user_NTR_true_character_id(
+                # 获取发起者牛老婆成功的ID列表
+                user_NTR_true_character_ids = await statistics_sv.get_user_initiator_character_ids(
                     initiator_ug=ug,
                     event_type="牛老婆",
                     result="成功"
                 )
+                # 获取发起者交换老婆成功的ID列表
+                user_NTR_true_character_ids += await statistics_sv.get_user_initiator_character_ids(
+                    initiator_ug=ug,
+                    event_type="交换老婆",
+                    result="同意"
+                )
+                # 获取接受者交换老婆成功的ID列表
+                user_NTR_true_character_ids += await statistics_sv.get_user_receiver_character_ids(
+                    receiver_ug=ug,
+                    event_type="交换老婆",
+                    result="同意"
+                )
                 # 合并老婆列表
-                user_character_id += user_NTR_true_character_id
+                user_character_id += user_NTR_true_character_ids
                 # 转换成集合以去除重复项
                 user_character_id_set = set(user_character_id)
                 # 转换回列表
