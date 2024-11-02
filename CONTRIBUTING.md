@@ -48,14 +48,27 @@ result="出新"
 获取到群组用户`ug`抽到的所有老婆ID
 ##### 2. 根据ID列表获取老婆名字
 在[character_application_service.py](application/services/character_application_service.py)中新增`get_character_names_by_ids`函数，它可以通过传入的老婆ID`id`获取到老婆的名字`character_names`
-##### 3. 获得牛老婆成功取所得的老婆ID
-在[statistics_application_service.py](application/services/statistics_application_service.py)中新增`get_user_NTR_true_character_id`函数，它可以通过传入
+##### 3. 获得发起者（牛老婆/交换老婆）成功取所得的老婆ID
+在[statistics_application_service.py](application/services/statistics_application_service.py)中新增`get_user_initiator_character_ids`函数，它可以通过传入
 ```
 initiator_ug=ug,
 event_type="牛老婆",
 result="成功"
 ```
-获取到群组用户`ug`牛到手的所有老婆ID
+```python
+initiator_ug=ug,
+event_type="交换老婆",
+result="同意"
+```
+获取到群组用户`ug`牛/交换到手的所有老婆ID
+##### 4. 获得接收者（交换老婆）换取所得的老婆ID
+在[statistics_application_service.py](application/services/statistics_application_service.py)中新增`get_user_receiver_character_ids`函数，它可以通过传入
+```python
+receiver_ug=ug,
+event_type="交换老婆",
+result="同意"
+```
+获取到群组用户`ug`同意他人交换老婆换取到手的所有老婆ID
 
 #### 3. 切换NTR图鉴开关
 `load_ntr_atlas_statuses` 和 `save_ntr_atlas_statuses` 函数接受一个文件名作为参数，这样你就可以为不同的配置或数据使用不同的文件。
