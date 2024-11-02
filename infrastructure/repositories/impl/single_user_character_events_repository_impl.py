@@ -94,7 +94,7 @@ class SingleUserCharacterEventRepositoryImpl(SingleRepository):
         stmt = (
             select(
                 # 去除重复项
-                func.count(distinct(SingleORM.character_id)).label('unique_character_count')
+                func.count(distinct(SingleORM.character_id)).label('event_count')
             )
             .filter(SingleORM.user_group_id == user_group_id)
             .filter(SingleORM.event_type == event_type)

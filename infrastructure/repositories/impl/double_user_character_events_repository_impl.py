@@ -145,7 +145,8 @@ class DoubleUserCharacterEventRepositoryImpl(DoubleRepository):
             return row.event_count
         return 0
 
-    async def get_current_receiver_character_id_by_action_initiator_user_group_id(
+    # 查询发起者所得的老婆ID
+    async def get_receiver_current_character_ids_by_action_initiator_user_group_id(
         self,
         action_initiator_user_group_id: int,
         event_type: str,
@@ -165,3 +166,25 @@ class DoubleUserCharacterEventRepositoryImpl(DoubleRepository):
         receiver_current_character_ids = [row[0] for row in result.fetchall()]  # 提取所有行并只取 receiver_current_character_id
         # 返回包含唯一 receiver_current_character_id 的列表
         return receiver_current_character_ids
+
+    # 查询接受者所得的老婆ID
+    async def get_initiator_current_character_ids_by_action_receiver_user_group_id(
+           self,
+           action_receiver_user_group_id: int,
+           event_type: str,
+           result: Optional[str] = None
+    ) -> List[int]:
+        # 构造查询
+        stmt = (
+            select(distinct(DoubleORM.initiator_current_character_id))  # 使用 distinct 来获取不同的 initiator_current_character_id
+            .filter(DoubleORM.action_receiver_user_group_id == action_receiver_user_group_id)
+            .filter(DoubleORM.event_type == event_type)
+        )
+        # 如果指定了 result，则添加相应的过滤条件
+        if result:
+            stmt = stmt.filter(DoubleORM.result == result)
+        # 执行查询
+        result = await self.session.execute(stmt)
+        action_receiver_user_group_ids = [row[0] for row in result.fetchall()]  # 提取所有行并只取 receiver_current_character_id
+        # 返回包含唯一 action_receiver_user_group_id 的列表
+        return action_receiver_user_group_ids
