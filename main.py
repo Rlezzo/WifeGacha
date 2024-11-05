@@ -640,9 +640,15 @@ async def add_wife(bot, ev: CQEvent):
     if not re.match("^[a-z_]+$", pool_name) or len(pool_name) > 30:
         await bot.send(ev, "卡池名需为纯英文小写字母或下划线'_'，且长度不超过30个字符，请重新输入。")
     # 获得图片信息
-    ret = re.search(r"\[CQ:image,file=(.*)?,url=(.*)\]", str(ev.message))
-    if not ret:
-        # 未获得图片信息
+    image_url = None
+    for message_segment in ev.message:
+        if message_segment.type == 'image':
+            # 提取图片的 URL
+            image_url = message_segment.data.get('url')
+            if image_url:
+                break
+    if not image_url:
+        # 如果没有找到图片 URL
         await bot.send(ev, '请附带二次元老婆图片~')
         return
     # 检查是否同名，同名禁止添加，需要到更新老婆去更新
@@ -653,11 +659,10 @@ async def add_wife(bot, ev: CQEvent):
             if existing_character:
                 await bot.send(ev, '出现重名，请使用[更新老婆]命令')
                 return
-            # 获取下载url
-            url = ret.group(2)
+
             # 下载图片保存到本地并获取文件名
             try:
-                image_name = await download_async(url, name, pool_name)
+                image_name = await download_async(image_url, name, pool_name)
             except Exception as e:
                 hoshino.logger.exception(f'下载图片失败:{e}')
                 await bot.send(ev, '下载图片失败')
@@ -715,9 +720,15 @@ async def update_wife(bot, ev: CQEvent):
         await bot.send(ev, "卡池名需为纯英文小写字母或下划线'_'，且长度不超过30个字符，请重新输入。")
         return
     # 获得图片信息
-    ret = re.search(r"\[CQ:image,file=(.*)?,url=(.*)\]", str(ev.message))
-    if not ret:
-        # 未获得图片信息
+    image_url = None
+    for message_segment in ev.message:
+        if message_segment.type == 'image':
+            # 提取图片的 URL
+            image_url = message_segment.data.get('url')
+            if image_url:
+                break
+    if not image_url:
+        # 如果没有找到图片 URL
         await bot.send(ev, '请附带二次元老婆图片~')
         return
     # 检查是否同名，不同名让他去添加，同名就更新
@@ -733,9 +744,8 @@ async def update_wife(bot, ev: CQEvent):
             # 备份原图片文件
             backup_path, src_path, backup_image_name, backup_pool_name = await backup_character_image(existing_character.image_name, existing_character.pool_name)
             # 下载新图片文件
-            url = ret.group(2)
             try:
-                new_image_name = await download_async(url, name, pool_name)
+                new_image_name = await download_async(image_url, name, pool_name)
             except Exception as e:
                 # 恢复原图片文件
                 await restore_character_image(backup_path, src_path)
