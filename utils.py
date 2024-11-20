@@ -266,3 +266,30 @@ def save_ntr_atlas_statuses(statuses, filename):
     file_path = os.path.join(os.path.dirname(__file__), 'config', filename)
     with open(file_path, 'w', encoding='utf-8') as f:
         json.dump(statuses, f, ensure_ascii=False, indent=4)
+
+#————————————————————根据CQ中的"xxx=xxxx,yyy=yyyy,..."提取出file、file_name和url————————————————————#
+async def extract_file(cq_code_str: str) -> (str, str, str):
+    # 解析所有CQ码参数
+    cq_split = cq_code_str.split(',')
+
+    # 拿到file参数 | 如果是单文件名：原始CQ | 如果是带路径的文件名：XQA本地已保存的图片，需要获取到单文件名
+    cq_image_file_raw = next(filter(lambda x: x.startswith('file='), cq_split), '')
+    cq_file_data = cq_image_file_raw.replace('file=', '')
+    cq_image_file = cq_file_data.split('\\')[-1].split('/')[-1] if 'file:///' in cq_file_data else cq_file_data
+
+    # 文件名 | Go-cq是没有这些参数的，可以直接用file参数 | 如果有才做特殊兼容处理：优先级：file_unique > filename > file_id
+    cq_image_file_name_raw = (next(filter(lambda x: x.startswith('file_unique='), cq_split), '')
+                           .replace('file_unique=', ''))
+    cq_image_file_name_raw = (next(filter(lambda x: x.startswith('filename='), cq_split), '')
+                           .replace('filename=', '')) if not cq_image_file_name_raw else cq_image_file_name_raw
+    cq_image_file_name_raw = (next(filter(lambda x: x.startswith('file_id='), cq_split), '')
+                           .replace('file_id=', '')) if not cq_image_file_name_raw else cq_image_file_name_raw
+    # 如果三个都没有 | 那就直接用file参数，比如Go-cq
+    cq_image_file_name = cq_image_file_name_raw if cq_image_file_name_raw else cq_image_file
+    # 补齐文件拓展名
+    cq_image_file_name = cq_image_file_name if '.' in cq_image_file_name[-10:] else cq_image_file_name + '.image'
+
+    # 拿到URL | GO-CQ是没有这个参数的 | NapCat有
+    cq_image_url = (next(filter(lambda x: x.startswith('url='), cq_split), '').replace('url=', ''))
+
+    return cq_image_file, cq_image_file_name, cq_image_url
