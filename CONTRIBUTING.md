@@ -70,6 +70,10 @@ result="同意"
 ```
 获取到群组用户`ug`同意他人交换老婆换取到手的所有老婆ID
 
+##### 5. 提取CQ码中的file、file_name和url
+在[utils.py](utils.py)中的`extract_file`函数，它可以通过传入CQ码中的"xxx=xxxx,yyy=yyyy,..."提取出file、file_name和url
+
+
 #### 3. 切换NTR图鉴开关
 `load_ntr_atlas_statuses` 和 `save_ntr_atlas_statuses` 函数接受一个文件名作为参数，这样你就可以为不同的配置或数据使用不同的文件。
 在事件处理函数`async def switch_atlas_ntr(bot, ev: CQEvent)`中，我们每次需要访问或修改状态时都会调用 `load_ntr_atlas_statuses` 来获取最新的字典，并在修改后调用 `save_ntr_atlas_statuses` 来保存更改。
