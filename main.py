@@ -758,7 +758,7 @@ async def add_wife(bot, ev: CQEvent):
     cq_type, cq_params = cq_list[0]  # 直接访问第一个元素
     # 获得图片信息
     if cq_type == 'image':
-        # 解析url
+        # 解析CQ码中的file、file_name和url
         cq_image_file, cq_image_file_name, cq_image_url = await extract_file(cq_params)
     else:
         await bot.send(ev, '请附带二次元老婆图片~')
@@ -837,7 +837,7 @@ async def update_wife(bot, ev: CQEvent):
     cq_type, cq_params = cq_list[0]  # 直接访问第一个元素
     # 获得图片信息
     if cq_type == 'image':
-        # 解析url
+        # 解析CQ码中的file、file_name和url
         cq_image_file, cq_image_file_name, cq_image_url = await extract_file(cq_params)
     else:
         await bot.send(ev, '请附带二次元老婆图片~')
@@ -855,6 +855,7 @@ async def update_wife(bot, ev: CQEvent):
             # 备份原图片文件
             backup_path, src_path, backup_image_name, backup_pool_name = await backup_character_image(
                 existing_character.image_name, existing_character.pool_name)
+            # 下载图片保存到本地并获取文件名
             try:
                 new_image_name = await download_async(cq_image_url, name, pool_name)
             except Exception as e:
