@@ -1,4 +1,4 @@
-import asyncio, os, mimetypes, aiohttp, aiofiles
+import asyncio, os, mimetypes, httpx, aiofiles, ssl
 from datetime import datetime, timedelta
 from html import unescape
 from PIL import Image, UnidentifiedImageError
@@ -117,106 +117,312 @@ async def handle_ex_wife(user_id: int, target_id: int, group_id: int, agree: boo
                 await event_sv.add_double_event(ug, ug_target, ug_wife, ug_target_wife, "交换老婆", "拒绝")
                 
 async def download_async(url: str, name: str, pool_name: str) -> str:
-    url = unescape(url)
-    timeout = aiohttp.ClientTimeout(total=15)
-    async with aiohttp.ClientSession(timeout=timeout) as session:
-        async with session.get(url) as resp:
-            # 检查响应状态码
-            if resp.status == 404:
+    url = unescape(url)         
+    headers = {'User-Agent': 'Mozilla/5.0'}
+    
+    # 配置 SSL 上下文
+    ctx = ssl.create_default_context()
+    ctx.set_ciphers('ALL')
+    
+    # 设置超时和异步客户端
+    timeout = httpx.Timeout(15.0)
+    async with httpx.AsyncClient(verify=ctx, headers=headers, timeout=timeout) as client:
+        try:
+            response = await client.get(url)
+            if response.status_code == 404:
                 raise ValueError('文件不存在')
-            content = await resp.read()  # 读取响应内容
-            # 通过MIME类型获取文件扩展名
-            try:
-                mime = resp.content_type
-                extension = mimetypes.guess_extension(mime)
-                if not extension:
-                    raise ValueError('无法识别的文件类型')
-            except Exception as e:
-                raise ValueError(f'不是有效文件类型: {e}')
             
-            # 生成文件保存路径
+            content = response.content  # 直接获取二进制内容
+            mime = response.headers.get('content-type', '').split(';')[0].strip()
+            
+            # 获取文件扩展名
+            extension = mimetypes.guess_extension(mime)
+            if not extension:
+                raise ValueError('无法识别的文件类型')
+            
+            # 创建保存目录
             directory = os.path.join(img_path, pool_name)
+            os.makedirs(directory, exist_ok=True)
             abs_path = os.path.join(directory, f'{name}{extension}')
             
-            # 确保目录存在
+            # 验证图像有效性，使用 run_in_executor 确保不阻塞事件循环
             try:
-                os.makedirs(directory, exist_ok=True)
-            except Exception as e:
-                raise IOError(f'目录创建失败: {e}')
-            
-            # 检查文件内容是否为有效图像
-            try:
-                image = Image.open(BytesIO(content))
-                image.verify()  # 验证图像文件的完整性
+                image = await asyncio.to_thread(Image.open, BytesIO(content))
+                await asyncio.to_thread(lambda img: img.verify(), image)
             except UnidentifiedImageError:
                 raise ValueError('下载的内容不是有效的图像文件')
             
-            # 区分 GIF 动图和静态图
-            if mime == 'image/gif':
-                # 压缩 GIF 动图
-                image = Image.open(BytesIO(content))
-                image = await resize_gif(image)
-                async with aiofiles.open(abs_path, 'wb') as f:
-                    output = BytesIO()
-                    image.save(output, format=image.format, save_all=True, loop=0)
-                    await f.write(output.getvalue())
-            else:
-                # 压缩静态图
-                image = Image.open(BytesIO(content))
-                image = await resize_image(image)
-                async with aiofiles.open(abs_path, 'wb') as f:
-                    output = BytesIO()
-                    image.save(output, format=image.format)
-                    await f.write(output.getvalue())
+            # 重新打开图像进行处理（因为 verify 会关闭图像）
+            image = await asyncio.to_thread(Image.open, BytesIO(content))
             
-            return f'{name}{extension}'  # 返回文件名
+            # 处理 GIF 或静态图
+            is_gif = mime == 'image/gif' and getattr(image, "n_frames", 1) > 1
+            
+            if is_gif:
+                resized_image = await asyncio.to_thread(resize_gif, image)
+            else:
+                resized_image = await asyncio.to_thread(resize_image, image)
+            
+            # 异步保存文件
+            async with aiofiles.open(abs_path, 'wb') as f:
+                output = BytesIO()
+                
+                if is_gif:
+                    await asyncio.to_thread(
+                        lambda: resized_image.save(
+                            output, 
+                            format="GIF", 
+                            save_all=True, 
+                            loop=0,
+                            optimize=True
+                        )
+                    )
+                else:
+                    # 为不同格式选择最佳保存参数
+                    save_kwargs = {}
+                    if image.format == "JPEG":
+                        save_kwargs["quality"] = 85
+                        save_kwargs["optimize"] = True
+                    elif image.format == "PNG":
+                        save_kwargs["optimize"] = True
+                    
+                    await asyncio.to_thread(
+                        lambda: resized_image.save(output, format=image.format, **save_kwargs)
+                    )
+                
+                await f.write(output.getvalue())
+            
+            return f'{name}{extension}'
+        except httpx.HTTPError as e:
+            raise IOError(f'下载失败: {str(e)}')
 
-async def resize_image(image: Image) -> Image:
+
+def resize_image(image: Image.Image) -> Image.Image:
+    """压缩静态图像到指定大小以下"""
     max_size = 2 * 1024 * 1024  # 2MB
-    width, height = image.size
-    ratio = (max_size / len(image.tobytes())) ** 0.5  # 初始缩放比例
     
+    # 获取当前大小
+    output = BytesIO()
+    save_kwargs = {}
+    if image.format == "JPEG":
+        save_kwargs["quality"] = 85
+        save_kwargs["optimize"] = True
+    elif image.format == "PNG":
+        save_kwargs["optimize"] = True
+    
+    image.save(output, format=image.format, **save_kwargs)
+    current_size = output.tell()
+    
+    # 如果已经小于等于最大尺寸，直接返回
+    if current_size <= max_size:
+        return image
+    
+    # 计算初始缩放比例
+    width, height = image.size
+    ratio = (max_size / current_size) ** 0.5
+    
+    # 尝试先通过调整质量来减小文件大小（仅适用于JPEG）
+    if image.format == "JPEG":
+        quality = 95
+        while quality >= 65 and current_size > max_size:
+            output = BytesIO()
+            image.save(output, format="JPEG", quality=quality, optimize=True)
+            current_size = output.tell()
+            if current_size <= max_size:
+                output.seek(0)
+                return Image.open(output)
+            quality -= 5
+    
+    # 如果调整质量不足，则调整尺寸
     while True:
-        new_size = (int(width * ratio), int(height * ratio))
-        resized_image = image.resize(new_size, Image.Resampling.LANCZOS)
+        new_width = int(width * ratio)
+        new_height = int(height * ratio)
+        
+        # 确保尺寸不为零
+        if new_width < 1: new_width = 1
+        if new_height < 1: new_height = 1
+        
+        resized = image.resize((new_width, new_height), Image.Resampling.LANCZOS)
         
         output = BytesIO()
-        resized_image.save(output, format=image.format)
-        size = output.tell()
+        resized.save(output, format=image.format, **save_kwargs)
+        current_size = output.tell()
         
-        if size <= max_size or ratio <= 0.1:
-            break
+        if current_size <= max_size or ratio <= 0.1:
+            output.seek(0)
+            return Image.open(output)
         
-        ratio *= 0.9  # 减小缩放比例
-    
-    output.seek(0)
-    return Image.open(output)
+        ratio *= 0.8  # 更激进的缩小，避免太多循环
 
-async def resize_gif(image: Image) -> Image:
+
+def resize_gif(image: Image.Image) -> Image.Image:
+    """压缩GIF动图到指定大小以下"""
     max_size = 2 * 1024 * 1024  # 2MB
-    width, height = image.size
-    ratio = (max_size / len(image.tobytes())) ** 0.5  # 初始缩放比例
     
+    # 获取原始GIF大小
+    output = BytesIO()
+    image.save(output, format="GIF", save_all=True, optimize=True)
+    original_size = output.tell()
+    
+    # 如果已经小于等于最大尺寸，直接返回
+    if original_size <= max_size:
+        return image
+    
+    width, height = image.size
+    
+    # 首先尝试优化而不调整尺寸
     frames = []
-    while True:
-        new_size = (int(width * ratio), int(height * ratio))
-        for frame in range(0, image.n_frames):
+    durations = []
+    disposals = []
+    
+    # 提取所有帧和信息
+    try:
+        for frame in range(image.n_frames):
             image.seek(frame)
-            frame_image = image.resize(new_size, Image.Resampling.LANCZOS)
-            frames.append(frame_image)
+            # 保存每一帧的持续时间和处理方式
+            durations.append(image.info.get('duration', 100))
+            disposals.append(image.info.get('disposal', 2))
+            frames.append(image.copy())
+    except (AttributeError, EOFError):
+        # 如果出现读取问题，回退到简单处理
+        return _simple_resize_gif(image, max_size)
+    
+    # 先尝试只优化，不调整尺寸
+    output = BytesIO()
+    frames[0].save(
+        output,
+        format="GIF",
+        save_all=True,
+        append_images=frames[1:],
+        optimize=True,
+        duration=durations,
+        disposal=disposals,
+        loop=0
+    )
+    
+    if output.tell() <= max_size:
+        output.seek(0)
+        return Image.open(output)
+    
+    # 如果仅优化不够，尝试降低颜色数量
+    for colors in [256, 192, 128, 64]:
+        new_frames = []
+        for frame in frames:
+            # 转换为指定颜色数的调色板
+            if frame.mode != "P":
+                frame = frame.convert("P", palette=Image.Palette.ADAPTIVE, colors=colors)
+            new_frames.append(frame)
         
         output = BytesIO()
-        frames[0].save(output, format=image.format, save_all=True, append_images=frames[1:], loop=0)
-        size = output.tell()
+        new_frames[0].save(
+            output,
+            format="GIF",
+            save_all=True,
+            append_images=new_frames[1:],
+            optimize=True,
+            duration=durations,
+            disposal=disposals,
+            loop=0
+        )
         
-        if size <= max_size or ratio <= 0.1:
-            break
-        
-        ratio *= 0.9  # 减小缩放比例
-        frames = []
+        if output.tell() <= max_size:
+            output.seek(0)
+            return Image.open(output)
     
+    # 如果减少颜色数量不够，调整尺寸
+    ratio = 0.9
+    while ratio > 0.1:
+        new_width = int(width * ratio)
+        new_height = int(height * ratio)
+        
+        # 确保尺寸不为零
+        if new_width < 1: new_width = 1
+        if new_height < 1: new_height = 1
+        
+        new_frames = []
+        for frame in frames:
+            resized_frame = frame.resize((new_width, new_height), Image.Resampling.LANCZOS)
+            if resized_frame.mode != "P":
+                resized_frame = resized_frame.convert("P", palette=Image.Palette.ADAPTIVE, colors=128)
+            new_frames.append(resized_frame)
+        
+        output = BytesIO()
+        try:
+            new_frames[0].save(
+                output,
+                format="GIF",
+                save_all=True,
+                append_images=new_frames[1:],
+                optimize=True,
+                duration=durations,
+                disposal=disposals,
+                loop=0
+            )
+            
+            if output.tell() <= max_size:
+                output.seek(0)
+                return Image.open(output)
+        except Exception:
+            # 如果保存出错，可能是颜色模式问题，尝试简单调整
+            pass
+        
+        ratio *= 0.8
+    
+    # 如果所有方法都失败，回退到简单处理
+    return _simple_resize_gif(image, max_size)
+
+
+def _simple_resize_gif(image: Image.Image, max_size: int) -> Image.Image:
+    """简化版GIF压缩，用于处理复杂情况"""
+    width, height = image.size
+    ratio = 0.9
+    
+    while ratio > 0.1:
+        new_width = int(width * ratio)
+        new_height = int(height * ratio)
+        
+        # 确保尺寸不为零
+        if new_width < 1: new_width = 1
+        if new_height < 1: new_height = 1
+        
+        # 创建一个新的GIF
+        frames = []
+        for frame in range(image.n_frames):
+            image.seek(frame)
+            frame_img = image.copy().resize((new_width, new_height), Image.Resampling.LANCZOS)
+            if frame_img.mode != "P":
+                frame_img = frame_img.convert("P", palette=Image.Palette.ADAPTIVE)
+            frames.append(frame_img)
+        
+        # 保存并检查大小
+        output = BytesIO()
+        try:
+            frames[0].save(
+                output,
+                format="GIF",
+                save_all=True,
+                append_images=frames[1:],
+                optimize=True,
+                duration=100,
+                loop=0
+            )
+            
+            if output.tell() <= max_size:
+                output.seek(0)
+                return Image.open(output)
+        except Exception:
+            # 如果保存失败，继续尝试更小的尺寸
+            pass
+        
+        ratio *= 0.8
+    
+    # 如果所有方法都失败，返回最后的结果，即使可能超过大小限制
     output.seek(0)
-    return Image.open(output)
+    try:
+        return Image.open(output)
+    except Exception:
+        # 如果连打开都失败，返回原图
+        return image
 
 async def is_near_midnight() -> bool:
     """判断距离跨日是否小于2分钟"""
